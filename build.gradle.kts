@@ -18,6 +18,7 @@ repositories {
 }
 
 dependencies {
+	implementation("com.prowidesoftware:pw-iso20022:SRU2024-10.2.3")
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
