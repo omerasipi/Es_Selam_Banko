@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.08">
+    <BkToCstmrDbtCdtNtfctn>
+        <Ntfctn>
+            <Ntry>
+                <Amt Ccy="CHF">200.00</Amt>
+                <CdtDbtInd>CRDT</CdtDbtInd>
+                <BookgDt>
+                    <Dt>2024-03-01</Dt>
+                </BookgDt>
+                <NtryDtls>
+                    <TxDtls>
+                        <RltdPties>
+                            <Dbtr>
+                                <Nm>Jane Doe</Nm>
+                            </Dbtr>
+                        </RltdPties>
+                        <RmtInf>
+                            <Strd>
+                                <CdtrRefInf>
+                                    <Ref>REF2</Ref>
+                                </CdtrRefInf>
+                            </Strd>
+                        </RmtInf>
+                    </TxDtls>
+                </NtryDtls>
+            </Ntry>
+        </Ntfctn>
+    </BkToCstmrDbtCdtNtfctn>
+</Document>

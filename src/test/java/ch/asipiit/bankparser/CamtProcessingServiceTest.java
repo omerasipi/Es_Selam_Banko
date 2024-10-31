@@ -19,20 +19,38 @@ import static org.mockito.Mockito.when;
 class CamtProcessingServiceTest {
 
     @Mock
+    private Camt05300108Processor camt053Processor;
+
+    @Mock
     private Camt05400108Processor camt054Processor;
 
     private CamtProcessingService service;
 
     @BeforeEach
     void setUp() {
-        service = new CamtProcessingService(Arrays.asList(camt054Processor));
+        service = new CamtProcessingService(Arrays.asList(camt053Processor, camt054Processor));
     }
 
     @Test
-    void processFile_WithValidContent_ShouldReturnTransactions() {
-        String xmlContent = "<xml>test</xml>";
+    void processFile_WithCamt053_ShouldReturnTransactions() {
+        String xmlContent = "<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:camt.053.001.08\">";
         List<Transaction> expectedTransactions = Arrays.asList(
                 new Transaction("John Doe", LocalDate.now(), new BigDecimal("100.00"), "REF1", TransactionType.CREDIT)
+        );
+
+        when(camt053Processor.canProcess(xmlContent)).thenReturn(true);
+        when(camt053Processor.processTransactions(xmlContent)).thenReturn(expectedTransactions);
+
+        List<Transaction> result = service.processFile(xmlContent);
+
+        assertThat(result).isEqualTo(expectedTransactions);
+    }
+
+    @Test
+    void processFile_WithCamt054_ShouldReturnTransactions() {
+        String xmlContent = "<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:camt.054.001.08\">";
+        List<Transaction> expectedTransactions = Arrays.asList(
+                new Transaction("Jane Doe", LocalDate.now(), new BigDecimal("200.00"), "REF2", TransactionType.CREDIT)
         );
 
         when(camt054Processor.canProcess(xmlContent)).thenReturn(true);
@@ -45,7 +63,9 @@ class CamtProcessingServiceTest {
 
     @Test
     void processFile_WithUnsupportedFormat_ShouldThrowException() {
-        String xmlContent = "<xml>unsupported</xml>";
+        String xmlContent = "<Document xmlns=\"unsupported\">";
+
+        when(camt053Processor.canProcess(xmlContent)).thenReturn(false);
         when(camt054Processor.canProcess(xmlContent)).thenReturn(false);
 
         assertThatThrownBy(() -> service.processFile(xmlContent))
@@ -54,12 +74,14 @@ class CamtProcessingServiceTest {
     }
 
     @Test
-    void canProcessFile_WithSupportedFormat_ShouldReturnTrue() {
-        String xmlContent = "<xml>test</xml>";
-        when(camt054Processor.canProcess(xmlContent)).thenReturn(true);
+    void getSupportedFormats_ShouldReturnAllFormats() {
+        when(camt053Processor.getFormatVersion()).thenReturn("053.001.08");
+        when(camt054Processor.getFormatVersion()).thenReturn("054.001.08");
 
-        boolean result = service.canProcessFile(xmlContent);
+        List<String> formats = service.getSupportedFormats();
 
-        assertThat(result).isTrue();
+        assertThat(formats)
+                .hasSize(2)
+                .contains("053.001.08", "054.001.08");
     }
 }

@@ -18,7 +18,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,22 +37,13 @@ class BankParserControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(controller)
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .build();
+        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
 
     @Test
-    void healthCheck_ShouldReturnOk() throws Exception {
-        mockMvc.perform(get("/api/health"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("Service is running"));
-    }
-
-    @Test
-    void analyzeDonations_WithValidFile_ShouldReturnAnalysis() throws Exception {
+    void analyzeSingleFile_WithValidCamt054_ShouldReturnAnalysis() throws Exception {
         // Prepare test data
-        String xmlContent = "<xml>test</xml>";
+        String xmlContent = "<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:camt.054.001.08\">";
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "test.xml",
@@ -61,55 +52,78 @@ class BankParserControllerTest {
         );
 
         List<Transaction> transactions = Arrays.asList(
-                new Transaction("John Doe", LocalDate.now(), new BigDecimal("100.00"), "REF1", TransactionType.CREDIT),
-                new Transaction("Jane Doe", LocalDate.now(), new BigDecimal("200.00"), "REF2", TransactionType.CREDIT)
-        );
-
-        DonationAnalysis analysis = new DonationAnalysis(
-                Arrays.asList(new DonorSummary("John Doe", new BigDecimal("100.00"), new BigDecimal("100.00"), false, transactions)),
-                new BigDecimal("300.00"),
-                0,
-                LocalDate.now()
+                new Transaction("John Doe", LocalDate.now(), new BigDecimal("100.00"), "REF1", TransactionType.CREDIT)
         );
 
         when(processingService.processFile(any())).thenReturn(transactions);
-        when(analysisService.analyzeDonations(any())).thenReturn(analysis);
+        when(analysisService.analyzeDonations(any())).thenReturn(createSampleAnalysis());
 
-        mockMvc.perform(multipart("/api/analyze").file(file))
+        mockMvc.perform(multipart("/api/v1/donations/analyze-single").file(file))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.analysis").exists())
-                .andExpect(jsonPath("$.fileName").value("test.xml"))
-                .andExpect(jsonPath("$.transactionsProcessed").value(2));
+                .andExpect(jsonPath("$.fileInfo.fileType").value("CAMT.054"));
     }
 
     @Test
-    void analyzeDonations_WithEmptyFile_ShouldReturnBadRequest() throws Exception {
+    void analyzeSingleFile_WithEmptyFile_ShouldReturnBadRequest() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file",
-                "test.xml",
+                "empty.xml",
                 MediaType.TEXT_XML_VALUE,
                 new byte[0]
         );
 
-        mockMvc.perform(multipart("/api/analyze").file(file))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().string("File is empty"));
+        mockMvc.perform(multipart("/api/v1/donations/analyze-single").file(file))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    void validateFile_WithValidFile_ShouldReturnValidationResult() throws Exception {
-        MockMultipartFile file = new MockMultipartFile(
-                "file",
-                "test.xml",
+    void analyzeMultipleFiles_WithValidFiles_ShouldReturnCombinedAnalysis() throws Exception {
+        MockMultipartFile file1 = new MockMultipartFile(
+                "files",
+                "test1.xml",
                 MediaType.TEXT_XML_VALUE,
-                "<xml>test</xml>".getBytes()
+                "<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:camt.054.001.08\">".getBytes()
         );
 
-        when(processingService.canProcessFile(any())).thenReturn(true);
+        MockMultipartFile file2 = new MockMultipartFile(
+                "files",
+                "test2.xml",
+                MediaType.TEXT_XML_VALUE,
+                "<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:camt.053.001.08\">".getBytes()
+        );
 
-        mockMvc.perform(multipart("/api/validate").file(file))
+        List<Transaction> transactions = Arrays.asList(
+                new Transaction("John Doe", LocalDate.now(), new BigDecimal("100.00"), "REF1", TransactionType.CREDIT),
+                new Transaction("Jane Doe", LocalDate.now(), new BigDecimal("200.00"), "REF2", TransactionType.CREDIT)
+        );
+
+        when(processingService.processFile(any())).thenReturn(transactions);
+        when(analysisService.analyzeDonations(any())).thenReturn(createSampleAnalysis());
+
+        mockMvc.perform(multipart("/api/v1/donations/analyze-multiple")
+                        .file(file1)
+                        .file(file2))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.isValid").value(true))
-                .andExpect(jsonPath("$.fileName").value("test.xml"));
+                .andExpect(jsonPath("$.processedFiles").exists())
+                .andExpect(jsonPath("$.analysis").exists());
+    }
+
+    private DonationAnalysis createSampleAnalysis() {
+        List<Transaction> transactions = Arrays.asList(
+                new Transaction("John Doe", LocalDate.now(), new BigDecimal("100.00"), "REF1", TransactionType.CREDIT)
+        );
+
+        List<DonorSummary> donors = Arrays.asList(
+                new DonorSummary(
+                        "John Doe",
+                        new BigDecimal("100.00"),
+                        new BigDecimal("100.00"),
+                        false,
+                        transactions
+                )
+        );
+
+        return new DonationAnalysis(donors, new BigDecimal("100.00"), 0, LocalDate.now().atStartOfDay());
     }
 }
