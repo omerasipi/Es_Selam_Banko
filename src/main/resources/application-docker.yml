@@ -1,0 +1,21 @@
+# src/main/resources/application-docker.yml
+spring:
+  application:
+    name: bank-parser
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+      enabled: true
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+logging:
+  level:
+    root: INFO
+    ch.asipiit.bankparser: DEBUG
+  file:
+    name: /app/logs/bankparser.log

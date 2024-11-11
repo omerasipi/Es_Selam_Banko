@@ -52,3 +52,8 @@ tasks.withType<Test> {
 tasks.withType<JavaCompile> {
 	options.encoding = "UTF-8"
 }
+
+// Add this bootJar duplicates strategy to handle duplicate JAR entries
+tasks.getByName<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+	duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
+}

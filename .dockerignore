@@ -1,0 +1,33 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.idea/
+*.iml
+*.iws
+.settings/
+.project
+.classpath
+
+# Gradle
+.gradle/
+build/
+!build/libs/*.jar
+
+# Logs
+logs/
+*.log
+
+# Temp files
+*.tmp
+*.temp
+tmp/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Test files
+src/test/

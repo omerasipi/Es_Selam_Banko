@@ -130,7 +130,7 @@
                         formData.append('files', file);
                     });
 
-                    const response = await fetch('http://localhost:8080/api/v1/donations/analyze-multiple', {
+                    const response = await fetch('https://bank.es-selam.ch/api/v1/donations/analyze-multiple', {
                         method: 'POST',
                         body: formData,
                     });
